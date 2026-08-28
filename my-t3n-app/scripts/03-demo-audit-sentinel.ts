@@ -20,9 +20,14 @@ import { connectTenant } from "../lib/session.js";
 
 const CONTRACT_TAIL = "audit-sentinel";
 
-async function buildAgentClient(agentKey: string, wasmComponent: unknown) {
+async function buildAgentClient(
+  agentKey: string,
+  wasmComponent: unknown,
+  trustAnchor: unknown,
+) {
   const agentAddress = eth_get_address(agentKey);
   const client = new T3nClient({
+    trustAnchor, // required on every T3nClient, agent clients included
     wasmComponent,
     handlers: { EthSign: metamask_sign(agentAddress, undefined, agentKey) },
   });
@@ -32,13 +37,13 @@ async function buildAgentClient(agentKey: string, wasmComponent: unknown) {
 }
 
 async function main() {
-  const { tenantDid, wasmComponent } = await connectTenant();
+  const { tenantDid, wasmComponent, trustAnchor } = await connectTenant();
 
   const agentKey = process.env.AGENT_KEY;
   if (!agentKey) {
     throw new Error('Set AGENT_KEY to any second T3N key: export AGENT_KEY="..."');
   }
-  const { client: agentClient, agentDid } = await buildAgentClient(agentKey, wasmComponent);
+  const { client: agentClient, agentDid } = await buildAgentClient(agentKey, wasmComponent, trustAnchor);
 
   const scriptName = `z:${tenantDid.slice("did:t3n:".length)}:${CONTRACT_TAIL}`;
   const scriptVersion = await getScriptVersion(getNodeUrl(), scriptName);

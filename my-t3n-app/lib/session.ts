@@ -39,6 +39,11 @@ export interface TenantSession {
   tenant: TenantClient;
   tenantDid: string;
   wasmComponent: Awaited<ReturnType<typeof loadWasmComponent>>;
+  // The pinned node attestation. The SDK requires a trustAnchor on
+  // EVERY T3nClient, including the per-agent clients the demo scripts
+  // build. We fetch it once here and share it, so the agent clients do
+  // not each re-fetch (and do not omit it and crash).
+  trustAnchor: Awaited<ReturnType<typeof fetchTrustedManifest>>;
 }
 
 let cached: Promise<TenantSession> | null = null;
@@ -57,8 +62,10 @@ async function connect(): Promise<TenantSession> {
   const wasmComponent = await loadWasmComponent();
   const address = eth_get_address(T3N_API_KEY);
 
+  const trustAnchor = await fetchTrustedManifest(ENVIRONMENT);
+
   const t3n = new T3nClient({
-    trustAnchor: await fetchTrustedManifest(ENVIRONMENT),
+    trustAnchor,
     wasmComponent,
     handlers: {
       EthSign: metamask_sign(address, undefined, T3N_API_KEY),
@@ -77,7 +84,7 @@ async function connect(): Promise<TenantSession> {
   await tenant.tenant.me(); // Throws an error when the session is not valid. me() lives on the tenant namespace (TenantClient.tenant), not on the client itself.
 
   console.log(`Connected as tenant: ${tenantDid}`);
-  return { t3n, tenant, tenantDid, wasmComponent };
+  return { t3n, tenant, tenantDid, wasmComponent, trustAnchor };
 }
 
 /** This function caches the session. Each script in this project can call this function and share one session. */

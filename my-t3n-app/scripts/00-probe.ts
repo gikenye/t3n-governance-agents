@@ -18,7 +18,7 @@ async function main() {
 
   // Tenant (primary key). connectTenant() does handshake + authenticate
   // + tenant.me() only.
-  const { tenantDid, wasmComponent } = await connectTenant();
+  const { tenantDid, wasmComponent, trustAnchor } = await connectTenant();
   const expectTenant = process.env.DID;
   console.log("tenant DID (key 1):", tenantDid);
   console.log("  matches .env DID:", expectTenant ? tenantDid === expectTenant : "(DID not in .env)");
@@ -28,6 +28,7 @@ async function main() {
   if (!agentKey) throw new Error("AGENT_KEY unset (expected from T3N_API_KEY_2)");
   const agentAddress = eth_get_address(agentKey);
   const agentClient = new T3nClient({
+    trustAnchor,
     wasmComponent,
     handlers: { EthSign: metamask_sign(agentAddress, undefined, agentKey) },
   });
