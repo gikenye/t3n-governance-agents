@@ -1,0 +1,60 @@
+/// z-credential-guardrail: a policy gate for other agents.
+///
+/// Other agents call this contract before they take a state-changing
+/// action. This contract replaces custom approval logic in each
+/// agent. A read action can auto-approve. An action over a set
+/// threshold needs a human. This contract stores each request that
+/// needs a human in an approvals inbox.
+///
+/// This contract is a reusable gate. Any tenant contract's
+/// state-changing function can sit behind this gate. This gate is not
+/// a fit for one single use case only.
+///
+/// This contract works with z-audit-sentinel. The calling agent logs
+/// each gate decision through `audit-sentinel.log-action`. See
+/// `scripts/11-demo-guardrail.ts` for this call. The two contracts
+/// stay small and single-purpose. The two contracts join at the
+/// script layer, not inside one large contract.
+package z:credential-guardrail@0.1.0;
+
+world credential-guardrail {
+    import host:tenant/tenant-context@1.0.0;
+    import host:interfaces/logging@2.1.0;
+    import host:interfaces/kv-store@2.1.0;
+
+    export contracts;
+}
+
+interface contracts {
+    record generic-input {
+        input:        option<list<u8>>,
+        user-profile: option<list<u8>>,
+        context:      option<list<u8>>,
+    }
+
+    /// The tenant calls this function, through the TenantClient, not
+    /// through an agent grant. This function replaces the whole rule
+    /// set.
+    /// Input  (JSON): {
+    ///   default_mode: string,             // "auto_approve", "needs_approval", or "deny"
+    ///   rules: [ { action: string, max_amount: option<u64>, mode: string } ]
+    /// }
+    /// Output (JSON): { saved: true, rule_count: u32 }
+    set-policy: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// An agent calls this function before it takes the real action.
+    /// Input  (JSON): { actor_did: string, action: string, amount: option<u64> }
+    /// Output (JSON): { decision, reason, request_id }
+    check-policy: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// A human approver, or the tenant, calls this function to close
+    /// a "needs_approval" request.
+    /// Input  (JSON): { request_id: string, approver_did: string, approve: bool }
+    /// Output (JSON): { request_id, resolved: string }
+    resolve-approval: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// This function reads back the requests that still wait on a
+    /// human. Input (JSON): { limit: option<u32> }
+    /// Output (JSON): { requests: [ { request_id, actor_did, action, amount, reason } ] }
+    list-pending: func(req: generic-input) -> result<list<u8>, string>;
+}

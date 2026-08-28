@@ -1,0 +1,59 @@
+/// z-audit-sentinel WIT world.
+///
+/// This contract is a governance agent for a T3N tenant. It gives the
+/// tenant one place to record every agent action. It also gives the
+/// tenant a way to read that record back as a report.
+///
+/// Terminal 3 ships four reference agents: Payroll, Procurement, E-visa,
+/// and Travel. Each agent moves money or data. None of the four agents
+/// produce a record that an auditor can read. This contract fills that
+/// gap.
+///
+/// This world imports three host capabilities:
+///   - tenant-context: reads the tenant DID, the cluster time, and the
+///     sequence number.
+///   - logging: writes debug, info, and error lines.
+///   - kv-store: writes each event to the map `z:<tid>:audit-log`. It
+///     also reads that map back with a range scan. The contract needs
+///     no external ledger API for this task. See notes.md for the
+///     reason.
+package z:audit-sentinel@0.1.0;
+
+world audit-sentinel {
+    import host:tenant/tenant-context@1.0.0;
+    import host:interfaces/logging@2.1.0;
+    import host:interfaces/kv-store@2.1.0;
+
+    export contracts;
+}
+
+interface contracts {
+    /// Standard 3-field envelope. The node uses this envelope for every
+    /// contract call.
+    record generic-input {
+        input:        option<list<u8>>,
+        user-profile: option<list<u8>>,
+        context:      option<list<u8>>,
+    }
+
+    /// Record one governed action. Call this function right after an
+    /// agent performs a sensitive action. You can also call this
+    /// function in place of the action, for a dry run. Each call gives
+    /// the tenant a first-party record. This record does not depend on
+    /// the log of the destination system.
+    /// Input  (JSON): {
+    ///   actor_did: string,          // the agent or user DID that took the action
+    ///   action: string,             // for example "book-offer", "transfer-funds"
+    ///   target: string,             // the contract or host that the action acted on
+    ///   status: string,             // "success", "denied", or "error"
+    ///   detail: option<string>      // a short note, with no PII
+    /// }
+    /// Output (JSON): { logged: true, event_key: string }
+    log-action: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// Read back a window of the audit log. The function returns the
+    /// oldest event first.
+    /// Input  (JSON): { limit: option<u32> }  // default 100, maximum 500
+    /// Output (JSON): { events: [ { ts, actor_did, action, target, status, detail } ] }
+    list-actions: func(req: generic-input) -> result<list<u8>, string>;
+}

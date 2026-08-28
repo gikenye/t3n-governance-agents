@@ -1,0 +1,24 @@
+# Secrets — NEVER commit. Contains real T3N private keys.
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Rust build output
+target/
+**/target/
+
+# Local run artifacts
+logs/
+probe-output.txt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

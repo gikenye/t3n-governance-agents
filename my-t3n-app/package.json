@@ -1,0 +1,20 @@
+{
+  "name": "my-t3n-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "connect": "tsx scripts/01-connect.ts",
+    "setup:sentinel": "tsx scripts/02-setup-audit-sentinel.ts",
+    "demo:sentinel": "tsx scripts/03-demo-audit-sentinel.ts",
+    "report:sentinel": "tsx scripts/04-report-audit-sentinel.ts",
+    "setup:guardrail": "tsx scripts/10-setup-guardrail.ts",
+    "demo:guardrail": "tsx scripts/11-demo-guardrail.ts"
+  },
+  "dependencies": {
+    "@terminal3/t3n-sdk": "latest"
+  },
+  "devDependencies": {
+    "tsx": "latest"
+  }
+}
