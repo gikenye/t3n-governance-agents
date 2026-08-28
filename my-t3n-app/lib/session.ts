@@ -74,7 +74,7 @@ async function connect(): Promise<TenantSession> {
     baseUrl: getNodeUrl(),
     tenantDid,
   });
-  await tenant.me(); // Throws an error when the session is not valid.
+  await tenant.tenant.me(); // Throws an error when the session is not valid. me() lives on the tenant namespace (TenantClient.tenant), not on the client itself.
 
   console.log(`Connected as tenant: ${tenantDid}`);
   return { t3n, tenant, tenantDid, wasmComponent };
