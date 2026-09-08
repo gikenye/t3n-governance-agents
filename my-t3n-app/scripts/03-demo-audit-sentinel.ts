@@ -13,7 +13,7 @@ import {
   createEthAuthInput,
   eth_get_address,
   metamask_sign,
-  getScriptVersion,
+  getContractVersion,
   getNodeUrl,
 } from "@terminal3/t3n-sdk";
 import { connectTenant } from "../lib/session.js";
@@ -46,7 +46,7 @@ async function main() {
   const { client: agentClient, agentDid } = await buildAgentClient(agentKey, wasmComponent, trustAnchor);
 
   const scriptName = `z:${tenantDid.slice("did:t3n:".length)}:${CONTRACT_TAIL}`;
-  const scriptVersion = await getScriptVersion(getNodeUrl(), scriptName);
+  const scriptVersion = await getContractVersion(getNodeUrl(), scriptName);
 
   // audit-sentinel makes no outbound HTTP call. So, unlike the flight
   // contract in the walkthrough, this contract needs no
@@ -81,8 +81,8 @@ async function main() {
 
   for (const event of events) {
     const result = await agentClient.executeAndDecode({
-      script_name: scriptName,
-      script_version: scriptVersion,
+      contract_id: scriptName,
+      contract_version: scriptVersion,
       function_name: "log-action",
       input: event,
     });

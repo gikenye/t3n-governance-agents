@@ -31,8 +31,24 @@ import {
 
 // Set the environment once, here, not in each script. Change this
 // value to "production" here only, when you are ready to go live.
+const configuredEnvironment = process.env.T3N_ENVIRONMENT;
+if (
+  configuredEnvironment &&
+  configuredEnvironment !== "testnet" &&
+  configuredEnvironment !== "sandbox" &&
+  configuredEnvironment !== "production"
+) {
+  throw new Error(
+    `Invalid T3N_ENVIRONMENT "${configuredEnvironment}". Use testnet, sandbox, or production.`,
+  );
+}
+
 const ENVIRONMENT: "testnet" | "sandbox" | "production" =
-  (process.env.T3N_ENVIRONMENT as any) ?? "testnet";
+  configuredEnvironment === "testnet" ||
+  configuredEnvironment === "sandbox" ||
+  configuredEnvironment === "production"
+    ? configuredEnvironment
+    : "testnet";
 
 export interface TenantSession {
   t3n: T3nClient;

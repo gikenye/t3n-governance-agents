@@ -39,6 +39,32 @@ npm run setup:guardrail
 npm run demo:guardrail
 ```
 
+The app pins `@terminal3/t3n-sdk` to `5.2.0`, the version currently
+compatible with the published testnet trust manifest. Set
+`T3N_ENVIRONMENT=production` only when production trust-manifest support is
+available for the installed SDK.
+
+### Repeatable development setup
+
+Setup commands keep their contract IDs in the ignored
+`.t3n-deployment.json` file and are safe to rerun:
+
+```bash
+npm run setup:sentinel
+npm run setup:guardrail
+```
+
+To intentionally remove one deployment and its private maps before a clean
+registration:
+
+```bash
+npm run reset:dev -- sentinel
+npm run reset:dev -- guardrail
+```
+
+Map deletion is asynchronous; the reset command waits for each map to become
+`absent` before unregistering the contract.
+
 ## Project layout
 
 ```
@@ -53,6 +79,53 @@ my-t3n-app/
 z-audit-sentinel/                ← Rust TEE contract 1, with its own README
 z-credential-guardrail/          ← Rust TEE contract 2, with its own README
 ```
+
+## Dashboard and API
+
+Start the server with `npm run serve` after loading the external `.env.local`,
+then open `http://localhost:8787`. T3N keys remain server-side. The API
+provides health, structured action preview, approvals, audit events, and a
+deterministic audit report.
+
+`POST /api/llm/parse` is a provider-neutral parser seam for development. It is
+not an LLM and cannot bypass the guardrail. A production LLM can replace it by
+producing the same validated action shape; the TEE decision remains
+authoritative.
+
+### Fly Machines deployment
+
+The included `Dockerfile`, `.dockerignore`, and `fly.toml` deploy the server
+as one durable Fly Machine. Replace `app` in `fly.toml` with a globally unique
+name, then from this directory run:
+
+```bash
+fly launch --no-deploy
+fly secrets set T3N_API_KEY="..." AGENT_KEY="..." T3N_ENVIRONMENT="testnet"
+fly deploy
+fly status
+```
+
+Do not copy `.env.local` into the image or commit it. `fly secrets` injects the
+keys at runtime. The `/healthz` endpoint is intentionally local-only and does
+not call T3N; `/api/health` validates the authenticated T3N connection.
+
+### Automatic deployment after merging
+
+The repository workflow `.github/workflows/deploy-fly.yml` deploys changes to
+`main` automatically. Configure these GitHub Actions secrets in the
+`production` environment:
+
+- `FLY_API_TOKEN`: a deploy token created with `fly tokens create deploy`
+- `FLY_APP_NAME`: the existing Fly application name
+
+Set the runtime secrets once on the Fly app:
+
+```bash
+flyctl secrets set T3N_API_KEY="..." AGENT_KEY="..." T3N_ENVIRONMENT="testnet" --app "$FLY_APP_NAME"
+```
+
+The workflow uses Fly's remote builder, so GitHub Actions does not need Docker
+or the local `.env.local`.
 
 ## Bugs and doc gaps found (for the bug-submission criterion)
 

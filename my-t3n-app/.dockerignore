@@ -1,0 +1,6 @@
+node_modules
+.env*
+.t3n-deployment.json
+npm-debug.log*
+Dockerfile
+README.md

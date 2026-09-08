@@ -9,12 +9,15 @@
     "demo:sentinel": "tsx scripts/03-demo-audit-sentinel.ts",
     "report:sentinel": "tsx scripts/04-report-audit-sentinel.ts",
     "setup:guardrail": "tsx scripts/10-setup-guardrail.ts",
-    "demo:guardrail": "tsx scripts/11-demo-guardrail.ts"
+    "demo:guardrail": "tsx scripts/11-demo-guardrail.ts",
+    "reset:dev": "tsx scripts/99-reset-dev.ts",
+    "serve": "tsx server.ts"
   },
   "dependencies": {
-    "@terminal3/t3n-sdk": "latest"
+    "@terminal3/t3n-sdk": "5.2"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "tsx": "latest"
   }
 }

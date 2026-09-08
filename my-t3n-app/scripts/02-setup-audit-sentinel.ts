@@ -11,14 +11,42 @@
 
 import { readFile } from "fs/promises";
 import { connectTenant } from "../lib/session.js";
+import { readDeployment, saveDeployment } from "../lib/deployment.js";
 
 const WASM_PATH =
   "../z-audit-sentinel/target/wasm32-wasip2/release/z_audit_sentinel.wasm";
 const CONTRACT_TAIL = "audit-sentinel"; // Keep this short. See the note in register-contract.md.
-const CONTRACT_VERSION = "0.1.0";
+const CONTRACT_VERSION = "0.1.2";
 
 async function main() {
   const { tenant, tenantDid } = await connectTenant();
+  const existing = await readDeployment(CONTRACT_TAIL);
+  const scriptName = `z:${tenantDid.slice("did:t3n:".length)}:${CONTRACT_TAIL}`;
+
+  if (existing?.version === CONTRACT_VERSION) {
+    const mapStatus = await tenant.maps.getStatus("audit-log");
+    if (mapStatus === "active") {
+      console.log(`Already ready: ${scriptName} (contract id ${existing.contractId})`);
+      return;
+    }
+    if (mapStatus === "deleting") {
+      throw new Error("audit-log is still deleting; rerun after it becomes absent");
+    }
+    await tenant.maps.create({
+      tail: "audit-log",
+      visibility: "private",
+      writers: { only: [existing.contractId] },
+      readers: { only: [existing.contractId] },
+    });
+    console.log(`Recreated ${scriptName}:audit-log for contract ${existing.contractId}`);
+    return;
+  }
+
+  if (existing) {
+    throw new Error(
+      `Local deployment is ${existing.version}; run npm run reset:dev -- sentinel before changing version`,
+    );
+  }
 
   const wasmBytes = await readFile(WASM_PATH);
   const result = await tenant.contracts.register({
@@ -27,7 +55,6 @@ async function main() {
     wasm: wasmBytes,
   });
   const contractId = result.contract_id;
-  const scriptName = `z:${tenantDid.slice("did:t3n:".length)}:${CONTRACT_TAIL}`;
   console.log(`Registered ${scriptName} as contract id ${contractId}`);
 
   // This map is the contract's only state. The readers list and the
@@ -42,6 +69,7 @@ async function main() {
     readers: { only: [contractId] },
   });
   console.log(`z:${tenantDid.slice("did:t3n:".length)}:audit-log map ready`);
+  await saveDeployment(CONTRACT_TAIL, { contractId, version: CONTRACT_VERSION });
 
   console.log(
     "\nSave this contract_id. A later registration of the same tail gives " +

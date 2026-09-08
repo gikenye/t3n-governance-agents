@@ -5,7 +5,7 @@
 //
 //   npm run report:sentinel
 
-import { getScriptVersion, getNodeUrl } from "@terminal3/t3n-sdk";
+import { getContractVersion, getNodeUrl } from "@terminal3/t3n-sdk";
 import { connectTenant } from "../lib/session.js";
 
 const CONTRACT_TAIL = "audit-sentinel";
@@ -20,16 +20,16 @@ interface AuditEvent {
 }
 
 async function main() {
-  const { tenant, tenantDid } = await connectTenant();
+  const { t3n, tenantDid } = await connectTenant();
   const scriptName = `z:${tenantDid.slice("did:t3n:".length)}:${CONTRACT_TAIL}`;
-  const scriptVersion = await getScriptVersion(getNodeUrl(), scriptName);
+  const scriptVersion = await getContractVersion(getNodeUrl(), scriptName);
 
   // This call reads the log back through the tenant's own contract
   // client. This call uses the same execute path as an agent call.
   // The tenant, not an agent, calls this function here.
-  const { events } = await tenant.contracts.executeAndDecode({
-    script_name: scriptName,
-    script_version: scriptVersion,
+  const { events } = await t3n.executeAndDecode({
+    contract_id: scriptName,
+    contract_version: scriptVersion,
     function_name: "list-actions",
     input: { limit: 500 },
   }) as { events: AuditEvent[] };

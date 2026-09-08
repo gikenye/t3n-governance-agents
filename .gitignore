@@ -7,6 +7,7 @@
 node_modules/
 npm-debug.log*
 package-lock.json
+!my-t3n-app/package-lock.json
 
 # Rust build output
 target/
@@ -15,6 +16,7 @@ target/
 # Local run artifacts
 logs/
 probe-output.txt
+.t3n-deployment.json
 
 # OS / editor
 .DS_Store

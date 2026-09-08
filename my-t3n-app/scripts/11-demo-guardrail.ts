@@ -11,7 +11,7 @@ import {
   createEthAuthInput,
   eth_get_address,
   metamask_sign,
-  getScriptVersion,
+  getContractVersion,
   getNodeUrl,
 } from "@terminal3/t3n-sdk";
 import { connectTenant } from "../lib/session.js";
@@ -36,7 +36,7 @@ async function buildAgentClient(
 }
 
 async function main() {
-  const { tenantDid, wasmComponent, trustAnchor } = await connectTenant();
+  const { t3n, tenantDid, wasmComponent, trustAnchor } = await connectTenant();
   const tid = tenantDid.slice("did:t3n:".length);
 
   const agentKey = process.env.AGENT_KEY;
@@ -44,22 +44,22 @@ async function main() {
   const { client: agentClient, agentDid } = await buildAgentClient(agentKey, wasmComponent, trustAnchor);
 
   const guardrailScript = `z:${tid}:${GUARDRAIL}`;
-  const guardrailVersion = await getScriptVersion(getNodeUrl(), guardrailScript);
+  const guardrailVersion = await getContractVersion(getNodeUrl(), guardrailScript);
   const sentinelScript = `z:${tid}:${SENTINEL}`;
-  const sentinelVersion = await getScriptVersion(getNodeUrl(), sentinelScript);
+  const sentinelVersion = await getContractVersion(getNodeUrl(), sentinelScript);
 
   async function checkAndLog(action: string, amount?: number) {
     const decision = await agentClient.executeAndDecode({
-      script_name: guardrailScript,
-      script_version: guardrailVersion,
+      contract_id: guardrailScript,
+      contract_version: guardrailVersion,
       function_name: "check-policy",
       input: { actor_did: agentDid, action, amount },
     });
     console.log(`check-policy(${action}, ${amount ?? "-"}) ->`, decision.decision, `(${decision.request_id})`);
 
     await agentClient.executeAndDecode({
-      script_name: sentinelScript,
-      script_version: sentinelVersion,
+      contract_id: sentinelScript,
+      contract_version: sentinelVersion,
       function_name: "log-action",
       input: {
         actor_did: agentDid,
@@ -92,13 +92,13 @@ async function main() {
   if (escalated.decision === "needs_approval") {
     // This call stands in for a human approver. The human resolves
     // the request from an approvals inbox.
-    const resolved = await agentClient.executeAndDecode({
-      script_name: guardrailScript,
-      script_version: guardrailVersion,
+    const resolved = await t3n.executeAndDecode({
+      contract_id: guardrailScript,
+      contract_version: guardrailVersion,
       function_name: "resolve-approval",
       input: {
         request_id: escalated.request_id,
-        approver_did: agentDid, // In production, use the approver's own DID here, not the agent's DID.
+        approver_did: tenantDid,
         approve: true,
       },
     });
@@ -106,8 +106,8 @@ async function main() {
   }
 
   const pending = await agentClient.executeAndDecode({
-    script_name: guardrailScript,
-    script_version: guardrailVersion,
+    contract_id: guardrailScript,
+    contract_version: guardrailVersion,
     function_name: "list-pending",
     input: {},
   });
